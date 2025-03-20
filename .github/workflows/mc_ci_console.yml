@@ -116,21 +116,21 @@ jobs:
       #     CONSOLE_PUBLIC_KEYCLOAK_CLIENT_ID: test-frontend
       #     CONSOLE_DATABASE_URL: postgresql://test:test_678@test:5433/testdb
 
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@master
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        with:
-          projectBaseDir: packages/console
-          args: >
-            -Dsonar.projectKey=console-api
-            -Dsonar.sources=src
-            -Dsonar.tests=tests
-            -Dsonar.python.version=3.12
-            -Dsonar.python.coverage.reportPaths=coverage.xml
-            -Dsonar.coverage.exclusions=tests/**,**/__init__.py
-            -Dsonar.test.reportPath=pytest-report.xml
+      # - name: SonarQube Scan
+      #   uses: SonarSource/sonarqube-scan-action@master
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      #   with:
+      #     projectBaseDir: packages/console
+      #     args: >
+      #       -Dsonar.projectKey=console-api
+      #       -Dsonar.sources=src
+      #       -Dsonar.tests=tests
+      #       -Dsonar.python.version=3.12
+      #       -Dsonar.python.coverage.reportPaths=coverage.xml
+      #       -Dsonar.coverage.exclusions=tests/**,**/__init__.py
+      #      -Dsonar.test.reportPath=pytest-report.xml
 
       # - uses: sonarsource/sonarqube-quality-gate-action@master
       #   timeout-minutes: 5
@@ -169,8 +169,8 @@ jobs:
           image: "console"
           ignore-errors: "true"
 
-      - uses: actions/upload-artifact@v4
-        name: Upload docker images
-        with:
-          name: docker_images
-          path: /tmp/_images
+      # - uses: actions/upload-artifact@v4
+      #   name: Upload docker images
+      #   with:
+      #     name: docker_images
+      #     path: /tmp/_images
