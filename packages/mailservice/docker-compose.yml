@@ -1,0 +1,34 @@
+x-cnf: &cnf
+  networks:
+    - memcrypt_app
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "200k"
+
+networks:
+  memcrypt_app:
+    external: true
+
+services:
+  memcrypt_mailservice:
+    image: rnwood/smtp4dev:v3
+    container_name: memcrypt_mailservice
+    hostname: memcrypt_mailservice
+    environment:
+      - ServerOptions__Urls=http://*:80
+      - DisableMessageSanitisation=true
+    ports:
+      - "3001:80"
+      - "26:25"
+      # Change the number before : to the port the IMAP server should be accessible on
+      - "143:143"
+    volumes:
+      # This is where smtp4dev stores the database..
+      - memcrypt_mailservice_data:/smtp4dev
+      - ./appsettings.json:/smtp4dev/appsettings.json
+    restart: "on-failure"
+    <<: *cnf
+
+volumes:
+  memcrypt_mailservice_data:

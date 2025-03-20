@@ -1,0 +1,139 @@
+name: OWASP ZAP Scan
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  zap_scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Download TestNG
+        run: |
+          mkdir -p lib
+          wget https://repo1.maven.org/maven2/org/testng/testng/7.7.0/testng-7.7.0.jar -P lib
+          wget https://repo1.maven.org/maven2/com/beust/jcommander/1.81/jcommander-1.81.jar -P lib
+          wget https://repo1.maven.org/maven2/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36.jar -P lib
+          wget https://repo1.maven.org/maven2/org/slf4j/slf4j-simple/1.7.36/slf4j-simple-1.7.36.jar -P lib
+
+      - name: Compile and run
+        run: |
+          javac -cp "$GITHUB_WORKSPACE/lib/testng-7.7.0.jar:$GITHUB_WORKSPACE/lib/jcommander-1.81.jar:$GITHUB_WORKSPACE/lib/slf4j-api-1.7.36.jar:$GITHUB_WORKSPACE/lib/slf4j-simple-1.7.36.jar:$GITHUB_WORKSPACE/tests/Security/src/main/java:bin" -d bin $GITHUB_WORKSPACE/tests/Security/src/main/java/utils/*.java $GITHUB_WORKSPACE/tests/Security/src/test/java/runner/*.java
+          java -cp "$GITHUB_WORKSPACE/lib/testng-7.7.0.jar:lib/jcommander-1.81.jar:$GITHUB_WORKSPACE/lib/slf4j-api-1.7.36.jar:lib/slf4j-simple-1.7.36.jar:bin" org.testng.TestNG $GITHUB_WORKSPACE/tests/Security/SecurityTestSuite.xml
+
+      - name: Pull OWASP ZAP Docker Image
+        run: docker pull zaproxy/zap-stable
+
+      - name: Set up directory and permissions
+        run: |
+          mkdir -p reports
+          chmod -R 777 reports
+          chmod -R 777 $(pwd)
+          sudo chown -R 1000:1000 reports
+
+      - name: Run ZAP Scan
+        run: |
+          report_file="index.html"  
+          > "$report_file"
+          
+          while IFS= read -r url; do
+          if [[ "$url" == *".json" ]]; then
+          format="openapi"
+          elif [[ "$url" == *"graphql"* ]]; then
+          format="graphql"
+          else
+          format="soap"
+          fi
+          
+          temp_report="index-$(echo $url | sed 's/[:/.]/-/g').html"
+          
+          docker run -u 1000:1000 -v $(pwd):/zap/wrk/:rw zaproxy/zap-stable zap-api-scan.py \
+          -t "$url" \
+          -f "$format" \
+          -r "$temp_report" || true
+          
+          if [ -f "$temp_report" ]; then
+          echo "$temp_report was created."
+          else
+          echo "Failed to create $temp_report."
+          fi
+        
+          echo "<hr>" >> "$report_file" 
+          echo "<h2>Report for $url</h2>" >> "$report_file" 
+          cat "$temp_report" >> "$report_file"
+          rm "$temp_report"
+          done < $GITHUB_WORKSPACE/tests/Security/src/assets/Zap_urls.txt
+               
+          mv index.html reports/
+
+      - name: Check report and set permissions
+        run: |
+          sudo chown -R $(id -u):$(id -g) reports
+          echo "Listing reports directory:"
+          ls -al reports
+          if [ -f reports/index.html ]; then
+            echo "ZAP report found"
+            chmod 644 reports/index.html
+          else
+            echo "ZAP report not found"
+          fi
+      
+      - name: Upload ZAP Scan Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: reports
+      
+  upload_report:
+    needs: zap_scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    name: Upload ZAP Report to gh-pages
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download ZAP report artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: zap-report
+          path: reports
+
+      - name: Push reports to gh-pages branch
+        run: |
+          today=$(date +'%d%m%Y')
+          git config --global user.name 'GitHub Actions Bot'
+          git config --global user.email 'actions@github.com'
+          git checkout gh-pages
+          git pull origin gh-pages
+          if [ -d "dast/$today" ]; then
+            rm -rf "dast/$today"
+            echo "Directory 'dast/$today' removed."
+          else
+            echo "Directory 'dast/$today' does not exist."
+          fi
+          mkdir -p "dast/$today"
+          cp -r reports/* "dast/$today/"
+          bash get_folders.sh
+          git add index.html dast/
+          git commit -m "[skip ci] Added DAST report for $today" || echo "No changes to commit"
+          git push origin gh-pages

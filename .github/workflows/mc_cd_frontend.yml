@@ -1,0 +1,134 @@
+# name: mc_cd_frontend
+
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       acr_version:
+#         description: 'ACR tag tool version'
+#         required: true
+#         default: 'latest'
+#         type: string
+#       REGISTRY_URL:
+#         description: 'Docker Registry URL'
+#         required: true
+#         default: 'cruksmcsnbx.azurecr.io'
+#         type: choice
+#         options:
+#           - cruksmcsnbx.azurecr.io
+#       RELEASE:
+#         description: 'Release Version'
+#         required: true
+#         default: latest
+#         type: string
+#       run-id:
+#         description: 'CI Run ID to take artifacts from'
+#         required: true
+#         type: number
+
+#   workflow_run:
+#     workflows: ["mc_ci_frontend"]
+#     types: [completed]
+#     branches: [main, quality-assurance, dev]
+
+# permissions:
+#   actions: read
+#   contents: read
+
+# jobs:
+#   Manual:
+#     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
+#     strategy:
+#       fail-fast: true
+#       matrix:
+#         target: [ snbx ]
+#     uses: ./.github/workflows/deployment.yml
+#     with:
+#       target-env: ${{ matrix.target }}
+#       REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
+#       RELEASE: ${{ inputs.RELEASE }}
+#       ACR_VERSION: ${{ inputs.acr_version }}
+#       run-id: ${{ inputs.run-id }}
+#       IMAGE_REPO: mc-frontend
+#     secrets: inherit
+#   Deployment:
+#     if: ${{ github.event.workflow_run.conclusion == 'success'  && github.event.workflow_run.head_branch == 'main' }}
+#     strategy:
+#       fail-fast: true
+#       matrix:
+#         target: [ snbx ]
+#     uses: ./.github/workflows/deployment.yml
+#     with:
+#       target-env: ${{ matrix.target }}
+#       REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
+#       RELEASE: ${{ inputs.RELEASE }}
+#       ACR_VERSION: ${{ inputs.acr_version }}
+#       run-id: ${{ github.event.workflow_run.id }}
+#       IMAGE_REPO: mc-frontend
+#     secrets: inherit
+  
+#   Manual-QA:
+#     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/quality-assurance' }}
+#     strategy:
+#       fail-fast: true
+#       matrix:
+#         target: [ qa ]
+#     uses: ./.github/workflows/deployment.yml
+#     with:
+#       target-env: ${{ matrix.target }}
+#       REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
+#       RELEASE: ${{ inputs.RELEASE }}
+#       ACR_VERSION: ${{ inputs.acr_version }}
+#       run-id: ${{ inputs.run-id }}
+#       IMAGE_REPO: mc-frontend
+#     secrets: inherit
+#   Deployment-QA:
+#     if: ${{ github.event.workflow_run.conclusion == 'success'  && github.event.workflow_run.head_branch == 'quality-assurance' }}
+#     strategy:
+#       fail-fast: true
+#       matrix:
+#         target: [ qa ]
+#     uses: ./.github/workflows/deployment.yml
+#     with:
+#       target-env: ${{ matrix.target }}
+#       REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
+#       RELEASE: ${{ inputs.RELEASE }}
+#       ACR_VERSION: ${{ inputs.acr_version }}
+#       run-id: ${{ github.event.workflow_run.id }}
+#       IMAGE_REPO: mc-frontend
+#     secrets: inherit
+
+#   Manual-Dev:
+#     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/dev' }}
+#     strategy:
+#       fail-fast: true
+#       matrix:
+#         target: [ dev ]
+#     uses: ./.github/workflows/deployment.yml
+#     with:
+#       target-env: ${{ matrix.target }}
+#       REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
+#       RELEASE: ${{ inputs.RELEASE }}
+#       ACR_VERSION: ${{ inputs.acr_version }}
+#       run-id: ${{ inputs.run-id }}
+#       IMAGE_REPO: mc-frontend
+#     secrets: inherit
+#   Deployment-Dev:
+#     if: ${{ github.event.workflow_run.conclusion == 'success'  && github.event.workflow_run.head_branch == 'dev' }}
+#     strategy:
+#       fail-fast: true
+#       matrix:
+#         target: [ dev ]
+#     uses: ./.github/workflows/deployment.yml
+#     with:
+#       target-env: ${{ matrix.target }}
+#       REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
+#       RELEASE: ${{ inputs.RELEASE }}
+#       ACR_VERSION: ${{ inputs.acr_version }}
+#       run-id: ${{ github.event.workflow_run.id }}
+#       IMAGE_REPO: mc-frontend
+#     secrets: inherit
+#   on-failure:
+#     runs-on: ubuntu-latest
+#     if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+#     steps:
+#       - run: echo 'The triggering workflow failed'

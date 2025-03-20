@@ -1,0 +1,176 @@
+name: mc_ci_console
+
+on:
+  pull_request:
+    branches: ["dev", "quality-assurance", "main"]
+    paths:
+      - "packages/console/**"
+      - ".github/workflows/mc_ci_console.yml"
+  push:
+    branches:
+      - "**"
+    paths:
+      - "packages/console/**"
+      - ".github/workflows/mc_ci_console.yml"
+  workflow_dispatch:
+    inputs:
+      REGISTRY_URL:
+        description: "Docker Registry URL"
+        required: true
+        default: cruksmcsnbx.azurecr.io
+        type: choice
+        options:
+          - cruksmcsnbx.azurecr.io
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: packages/console
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: console_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Load cached Poetry installation
+        id: cache-poetry
+        uses: actions/cache@v4
+        with:
+          path: ~/.local
+          key: poetry-1.8.3-0
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.8.3
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cache-dep
+        uses: actions/cache@v4
+        with:
+          path: packages/console/.venv
+          key: venv-console-${{ hashFiles('packages/console/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cache-dep.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      - name: Run linters
+        run: poetry run flake8 .
+
+      - name: Test
+        run: |
+          #poetry run pytest --junitxml=reports/test-results.xml
+          poetry run pytest tests/ -v --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=80
+        env:
+          CONSOLE_KEYCLOAK_URL: http://test_keycloak:8080
+          CONSOLE_KEYCLOAK_REALM: test
+          CONSOLE_KEYCLOAK_CLIENT_ID: test-backend
+          CONSOLE_KEYCLOAK_CLIENT_SECRET: avBpu5Lcs1OCGZIHRNqTRjKpeF1Q
+          CONSOLE_PUBLIC_KEYCLOAK_URL: http://localhost:8081
+          CONSOLE_PUBLIC_KEYCLOAK_CLIENT_ID: test-frontend
+          CONSOLE_DATABASE_URL: postgresql://postgres:password@localhost:5432/console_db
+
+      # - name: run code coverage
+      #   run: |
+      #     poetry run pytest tests/ -v \
+      #     --cov=app --cov-report=xml --cov-report=term-missing \
+      #     --cov-fail-under=80 \
+      #     --junitxml=reports/coverage-results.xml
+      #   env:
+      #     CONSOLE_KEYCLOAK_URL: http://test_keycloak:8080
+      #     CONSOLE_KEYCLOAK_REALM: test
+      #     CONSOLE_KEYCLOAK_CLIENT_ID: test-backend
+      #     CONSOLE_KEYCLOAK_CLIENT_SECRET: avBpu5Lcs1OCGZIHRNqTRjKpeF1Q
+      #     CONSOLE_PUBLIC_KEYCLOAK_URL: http://localhost:8081
+      #     CONSOLE_PUBLIC_KEYCLOAK_CLIENT_ID: test-frontend
+      #     CONSOLE_DATABASE_URL: postgresql://test:test_678@test:5433/testdb
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          projectBaseDir: packages/console
+          args: >
+            -Dsonar.projectKey=console-api
+            -Dsonar.sources=src
+            -Dsonar.tests=tests
+            -Dsonar.python.version=3.12
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.coverage.exclusions=tests/**,**/__init__.py
+            -Dsonar.test.reportPath=pytest-report.xml
+
+      # - uses: sonarsource/sonarqube-quality-gate-action@master
+      #   timeout-minutes: 5
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  docker-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/console
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set default value
+        id: acr
+        run: |
+          acr=${{ github.event.inputs.REGISTRY_URL }}
+          echo "::set-output name=acr_url::${acr:-"cruksmcsnbx.azurecr.io"}"
+
+      - name: build and save docker images
+        run: |
+          tag="$(date +%Y%m%d%H%M%S)"
+          repo="mc-console"
+          docker build -t ${{ steps.acr.outputs.acr_url}}/$repo:$tag .
+          console="$(docker image ls --format {{.Repository}}:{{.Tag}} | grep $repo)"
+          docker save $console -o console_${{ github.sha }}.tar
+          gzip -v console_${{ github.sha }}.tar
+          mkdir -p /tmp/_images
+          cp *.tar.gz /tmp/_images
+      - uses: ./.github/trivy
+        with:
+          trivy-version: "latest"
+          image: "console"
+          ignore-errors: "true"
+
+      - uses: actions/upload-artifact@v4
+        name: Upload docker images
+        with:
+          name: docker_images
+          path: /tmp/_images

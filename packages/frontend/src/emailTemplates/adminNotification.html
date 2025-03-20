@@ -1,0 +1,117 @@
+<div
+  style="
+    width: 100%;
+    max-width: 600px;
+    margin: 20px auto;
+    background-color: #ffffff;
+    padding: 20px;
+    border: 1px solid #dddddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    font-family: Arial, sans-serif;
+    color: #333333;
+    line-height: 1.6;
+  "
+>
+  <!-- Header Section with Logo -->
+  <div style="text-align: center; margin-bottom: 20px">
+    <img
+      src="https://memcrypt.io/assets/images/logo/logo.png"
+      alt="Logo"
+      style="max-width: 150px"
+    />
+  </div>
+
+  <!-- New User Registration -->
+  <div
+    style="
+      padding: 20px;
+      background-color: #f4f4f4;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px solid #e0e0e0;
+    "
+  >
+    <h1
+      style="
+        color: #c02427;
+        font-size: 24px;
+        margin: 0 0 10px 0;
+        text-align: center;
+        font-weight: bold;
+      "
+    >
+      👤 New User Registered
+    </h1>
+    <p style="text-align: center; margin: 0">
+      A new user has registered for the organization
+      <strong>{{orgName}}</strong>.
+    </p>
+  </div>
+
+  <!-- Content Section -->
+  <div
+    style="
+      padding: 20px;
+      background-color: #fafafa;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+    "
+  >
+    <p
+      style="
+        font-size: 20px;
+        margin-bottom: 10px;
+
+        color: #c02427;
+        font-weight: bold;
+      "
+    >
+      User Details:
+    </p>
+
+    <ul
+      style="
+        font-size: 16px;
+        margin: 0;
+        padding-left: 20px;
+        list-style-type: disc;
+        color: #555555;
+      "
+    >
+      <li style="margin-bottom: 8px">
+        <strong>Username:</strong> {{username}}
+      </li>
+      <li style="margin-bottom: 8px"><strong>Email:</strong> {{email}}</li>
+      <li style="margin-bottom: 8px">
+        <strong>First Name:</strong> {{firstName}}
+      </li>
+      <li style="margin-bottom: 8px">
+        <strong>Last Name:</strong> {{lastName}}
+      </li>
+    </ul>
+    <p style="color: #666; margin-top: 20px">
+      Please review and take appropriate action.
+    </p>
+    <p style="text-align: center; margin: 20px 0">
+      <a
+        href="{{approvalLink}}"
+        style="
+          display: inline-block;
+          background-color: #c02427;
+          color: #ffffff;
+          padding: 12px 24px;
+          text-decoration: none;
+          border-radius: 8px;
+          font-size: 18px;
+        "
+        >Approve or Reject</a
+      >
+    </p>
+  </div>
+
+  <p style="color: #333; margin-top: 20px; margin-left: 8px">
+    Best Regards,<br />
+    MemCrypt Platform &#x1F680;
+  </p>
+</div>

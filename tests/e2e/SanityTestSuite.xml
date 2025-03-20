@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="Suite">
+
+   <test thread-count="1" name="Sanity">
+        <parameter name="tag" value="@Sanity" />
+        <classes>
+            <class name="runner.UserSignUpTest"/>
+            <class name="runner.AdminApproveRejectUserSignupTest"/>
+            <class name="runner.UserAdminSignInTest"/>
+            <class name="runner.AgentBinaryUploadDownloadTest"/>
+            <class name="runner.DeviceCreationAndMonitoringTest"/>
+            <class name="runner.DeviceEndpointConfigTest"/>
+            <class name="runner.ApplicationWhitelistTest"/>
+            <class name="runner.ActivityLogsTest"/>
+            <class name="runner.FileRecoveryTest"/>
+            <class name="runner.UserOrgProfileTest"/>
+            <class name="runner.Teardown"/>
+        </classes>
+    </test>
+</suite> <!-- Suite -->

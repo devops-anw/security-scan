@@ -1,0 +1,20 @@
+# Use a lightweight base image
+FROM alpine:latest
+
+# Install jq and curl
+RUN apk add --no-cache bash jq curl util-linux
+
+# Set the working directory
+WORKDIR /opt/
+
+# Copy the setup script into the container
+COPY scripts/keycloak_setup.sh /opt/keycloak_setup.sh
+# COPY scripts/test.sh /opt/test.sh
+
+# Make the script executable
+RUN chmod +x /opt/keycloak_setup.sh
+# RUN chmod +x /opt/test.sh
+
+# Set the entry point to run the setup script
+ENTRYPOINT ["/bin/bash", "/opt/keycloak_setup.sh", "all"]
+# ENTRYPOINT [ "/opt/test.sh" ]

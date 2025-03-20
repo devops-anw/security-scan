@@ -1,0 +1,45 @@
+x-cnf: &cnf
+  networks:
+    - memcrypt_app
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "200k"
+
+networks:
+  memcrypt_app:
+    # external: true
+
+# include:
+#   - ../../keycloak/docker-compose.yml
+#   - ../mailservice/docker-compose.yml
+
+services:
+  # keycloak:
+  #   extends:
+  #     file: ../../keycloak/docker-compose.yml
+  #     service: keycloak
+
+  # mailservice:
+  #   extends:
+  #     file: ../mailservice/docker-compose.yml
+  #     service: mailservice
+
+  memcrypt_frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: memcrypt_frontend
+    hostname: memcrypt_frontend
+    env_file:
+      - .env
+    # depends_on:
+    #   memcrypt_keycloak:
+    #     condition: service_healthy
+    #   memcrypt_keycloaksetup:
+    #     condition: service_completed_successfully
+    ports:
+      - "3000:3000"
+    command: ["/bin/sh", "-c", "yarn start"]
+    restart: on-failure
+    <<: *cnf

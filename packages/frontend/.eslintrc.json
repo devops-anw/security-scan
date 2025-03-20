@@ -1,0 +1,16 @@
+{
+  "extends": [
+    "next/core-web-vitals"
+  ],
+  "rules": {
+    "react/no-is-mounted": "off"
+  },
+  "overrides": [
+    {
+      "files": ["src/pages/**/*.tsx", "src/components/**/*.tsx", "src/app/**/*.tsx"],
+      "rules": {
+        "react/no-is-mounted": "error"
+      }
+    }
+  ]
+}

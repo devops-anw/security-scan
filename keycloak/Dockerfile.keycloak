@@ -1,0 +1,35 @@
+# Use the official Keycloak image as the base image
+FROM quay.io/keycloak/keycloak:25.0.2
+
+# Set build-time variables
+ARG KEYCLOAK_USER
+ARG KEYCLOAK_PASSWORD
+ARG KC_FEATURES
+ARG HEALTH_CHECK
+
+# Set environment variables
+ENV KEYCLOAK_USER=${KEYCLOAK_USER}
+ENV KEYCLOAK_PASSWORD=${KEYCLOAK_PASSWORD}
+ENV KC_FEATURES=${KC_FEATURES}
+ENV HEALTH_CHECK=${HEALTH_CHECK}
+
+# Set the working directory
+WORKDIR /opt/keycloak
+
+# Copy the custom theme script and files into the container
+COPY scripts/keycloak_memcrypt_theme.sh /opt/keycloak/themes/memcrypt/keycloak_memcrypt_theme.sh
+COPY themes/memcrypt /opt/keycloak/themes/memcrypt
+
+# as  root
+USER root
+RUN chmod +x /opt/keycloak/themes/memcrypt/keycloak_memcrypt_theme.sh
+RUN sed -i -e 's/\r$//' /opt/keycloak/themes/memcrypt/keycloak_memcrypt_theme.sh
+RUN /opt/keycloak/themes/memcrypt/keycloak_memcrypt_theme.sh
+RUN chown -R keycloak /opt/keycloak/themes/memcrypt
+
+# Expose the default Keycloak port
+EXPOSE 8080
+
+# Run the custom theme script and then start Keycloak
+USER keycloak
+ENTRYPOINT ["/bin/bash", "-c", "/opt/keycloak/bin/kc.sh start-dev"]

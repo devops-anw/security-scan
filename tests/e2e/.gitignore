@@ -1,0 +1,18 @@
+/target/
+.settings
+.project
+.classpath
+.idea
+/reports/
+/test-output/
+/rerun/
+/Cookies/
+.webm
+/videos/
+/Downloads/
+/trace.zip
+
+# Ignore all user folders and allow exceptions for PlatformAdmin
+/users/*/*
+!/users/*/PlatformAdmin
+

@@ -1,0 +1,145 @@
+# name: mc_ci_agentBinary
+
+# on:
+#   pull_request:
+#     branches: ["dev", "quality-assurance", "main"]
+#     paths:
+#       - "Agentbinary/**"
+#       - ".github/workflows/mc_ci_agentbinary.yml"
+#   push:
+#     branches:
+#       - "**"
+#     paths:
+#       - "Agentbinary/**"
+#       - ".github/workflows/mc_ci_agentbinary.yml"
+#   workflow_dispatch:
+#     inputs:
+#       REGISTRY_URL:
+#         description: "Docker Registry URL"
+#         required: true
+#         default: cruksmcsnbx.azurecr.io
+#         type: choice
+#         options:
+#           - cruksmcsnbx.azurecr.io
+
+# concurrency:
+#   group: ${{ github.workflow }}-${{ github.ref }}
+#   cancel-in-progress: true
+
+# permissions:
+#   contents: read
+
+# jobs:
+#   build:
+#     runs-on: ubuntu-22.04
+#     defaults:
+#       run:
+#         working-directory: Agentbinary
+
+#     steps:
+#       - uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0
+
+#       - name: Set up Python 3.12
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: "3.12"
+
+#       - name: Load cached Poetry installation
+#         id: cache-poetry
+#         uses: actions/cache@v4
+#         with:
+#           path: ~/.local
+#           key: poetry-1.8.3-0
+
+#       - name: Install Poetry
+#         uses: snok/install-poetry@v1
+#         with:
+#           version: 1.8.3
+#           virtualenvs-create: true
+#           virtualenvs-in-project: true
+
+#       - name: Load cached venv
+#         id: cache-dep
+#         uses: actions/cache@v4
+#         with:
+#           path: Agentbinary/.venv
+#           key: venv-agentbinary-${{ hashFiles('Agentbinary/poetry.lock') }}
+
+#       - name: Install dependencies
+#         if: steps.cache-dep.outputs.cache-hit != 'true'
+#         run: poetry install --no-interaction --no-root
+
+#       - name: Run linters
+#         run: poetry run flake8 .
+
+#       - name: Run tests with coverage (optimized collection)
+#         run: |
+#           export PYTHONPATH=${{ github.workspace }}/Agentbinary:$PYTHONPATH
+#           poetry run pytest
+#         env:
+#           AB_KEYCLOAK_URL: https://keycloak.az.memcrypt.io
+#           AB_PUBLIC_KEYCLOAK_URL: https://keycloak.az.memcrypt.io
+#           AB_KEYCLOAK_REALM: memcrypt
+#           AB_KEYCLOAK_CLIENT_ID: memcrypt-backend
+#           AB_UPLOAD_MAX_FILE_SIZE: "104857600"
+          
+#       - name: SonarQube Scan
+#         uses: SonarSource/sonarqube-scan-action@master
+#         env:
+#           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+#           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+#         with:
+#           projectBaseDir: Agentbinary
+#           args: >
+#             -Dsonar.projectKey=agentbinary-api
+#             -Dsonar.sources=src
+#             -Dsonar.tests=tests
+#             -Dsonar.python.version=3.12
+#             -Dsonar.python.coverage.reportPaths=coverage.xml
+#             -Dsonar.coverage.exclusions=tests/**,**/__init__.py
+#             -Dsonar.test.reportPath=pytest-report.xml
+#             -X
+#       # - uses: sonarsource/sonarqube-quality-gate-action@master
+#       #   timeout-minutes: 5
+#       #   env:
+#       #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+#   docker-build:
+#     runs-on: ubuntu-latest
+#     defaults:
+#       run:
+#         working-directory: Agentbinary
+#     needs: build
+#     steps:
+#       - uses: actions/checkout@v4
+
+#       - name: Set default value
+#         id: acr
+#         run: |
+#           acr=${{ github.event.inputs.REGISTRY_URL }}
+#           echo "::set-output name=acr_url::${acr:-"cruksmcsnbx.azurecr.io"}"
+
+#       - name: build and save docker images
+#         run: |
+#           tag="$(date +%Y%m%d%H%M%S)"
+#           repo="mc-agentbinary"
+#           docker build -t ${{ steps.acr.outputs.acr_url}}/$repo:$tag .
+#           agentbinary="$(docker image ls --format {{.Repository}}:{{.Tag}} | grep $repo)"
+#           docker save $agentbinary -o agentbinary_${{ github.sha }}.tar
+#           gzip -v agentbinary_${{ github.sha }}.tar
+#           mkdir -p /tmp/_images
+#           cp *.tar.gz /tmp/_images
+
+#       - uses: ./.github/trivy
+#         with:
+#           trivy-version: "latest"
+#           image: "agentbinary"
+#           ignore-errors: "true"
+
+#       - uses: actions/upload-artifact@v4
+#         name: Upload docker images
+#         with:
+#           name: docker_images
+#           path: /tmp/_images

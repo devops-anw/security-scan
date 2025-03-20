@@ -1,0 +1,66 @@
+name: Trivy
+description: Container Image Scanning
+inputs:
+  trivy-version:
+    required: true
+    description: "Trivy Version"
+  image:
+    description: "Image Name"
+    required: true
+  ignore-errors:
+    description: "Continue Pipeline even when there are critical vulnerabilities"
+    default: "true"
+
+runs:
+    using: "composite"
+    steps:
+      - name: Set default value
+        id: path
+        shell: bash
+        run: |
+          path="./tools"
+          echo "::set-output name=tool_path::${path:-"./tools"}"
+
+      - name: Cache Trivy vulnerability database
+        uses: actions/cache@v3
+        with:
+          path: .cache/trivy
+          key: ${{ runner.os }}-trivy-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-trivy-
+            
+      - name: Install Trivy
+        shell: bash
+        run: |
+          bash .github/install_trivy.sh -v  ${{ inputs.trivy-version }} -d ${{ steps.path.outputs.tool_path}} -t ./temp
+      - name: Trivy Scan
+        shell: bash
+        env:
+          TRIVY_CACHE_FOLDER: .cache/trivy/
+          TRIVY_TEMPLATE: ${{ steps.path.outputs.tool_path}}/contrib/junit.tpl
+          TRIVY_SEVERITY_LEVEL: CRITICAL
+          IGNORE_ERRORS: ${{ inputs.ignore-errors }}
+        run: |
+          for targz in $(find .  -maxdepth 1 -type f -name "*.tar.gz")
+          do
+            gunzip $targz
+            docker load -q -i ${targz:0:-3}
+          done
+          docker images
+          for tag in $(docker image ls --format {{.Repository}}:{{.Tag}} | grep ${{ inputs.image }})
+          do
+            echo "=========================== $tag ==========================="
+
+            # Build report
+            ${{ steps.path.outputs.tool_path}}/trivy --cache-dir $TRIVY_CACHE_FOLDER image --exit-code 0 --no-progress --format template --template "@${TRIVY_TEMPLATE}" -o trivy-report.xml $tag
+
+            # Print report
+            ${{ steps.path.outputs.tool_path}}/trivy --cache-dir $TRIVY_CACHE_FOLDER image --exit-code 0 --no-progress $tag
+
+            if [ -z $IGNORE_ERRORS ] || [ $IGNORE_ERRORS != "true" ]; then
+                echo "Breaking build for critical vulnerabilities if any"
+                ${{ steps.path.outputs.tool_path}}/trivy --cache-dir $TRIVY_CACHE_FOLDER image --exit-code 1 --no-progress --severity $TRIVY_SEVERITY_LEVEL $tag
+            fi            
+          
+          done
+

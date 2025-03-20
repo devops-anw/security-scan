@@ -1,0 +1,32 @@
+x-cnf: &cnf
+  networks:
+    - memcrypt_app
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "200k"
+
+networks:
+  memcrypt_app:
+    external: true
+
+services:
+  memcrypt_agentbinary:
+    build: .
+    container_name: memcrypt_agentbinary
+    hostname: memcrypt_agentbinary
+    ports:
+      - "8000:8000"
+    volumes:
+      - memcrypt_agentbinary_storage:/app/uploads
+    environment:
+      - PYTHONUNBUFFERED=1
+      - AB_KEYCLOAK_URL=${AB_KEYCLOAK_URL}
+      - AB_PUBLIC_KEYCLOAK_URL=${AB_PUBLIC_KEYCLOAK_URL}
+      - AB_KEYCLOAK_REALM=${AB_KEYCLOAK_REALM}
+      - AB_KEYCLOAK_CLIENT_ID=${AB_KEYCLOAK_CLIENT_ID}
+  # <<: *cnf
+
+volumes:
+  memcrypt_agentbinary_storage:
+    driver: local
