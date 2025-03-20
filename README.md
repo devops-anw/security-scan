@@ -18,7 +18,7 @@ To start the frontend application standalone for development, refer to the [Manu
 
 1. `Prerequisites:`
 
-   - Ensure you have Docker and Docker Compose Installed
+   - Ensure you have Docker and Docker Compose Installed.
 
 2. `Set variables to start` Keycloak:\*\*
    
@@ -28,7 +28,7 @@ To start the frontend application standalone for development, refer to the [Manu
    
    
    
-3. `Build and Start:` We will start in two stages inital services and then app service
+3. `Build and Start:` We will start in two stages inital services and then app service.
 
    - Run the following command to build and start `inital  services` :
 
@@ -46,7 +46,7 @@ To start the frontend application standalone for development, refer to the [Manu
      - Retrive the backend client secret from keycloak : http://localhost:8081/ and update the var FE_KEYCLOAK_BACKEND_CLIENT_SECRET in ./packages/frontend/.env file
 
 
-   - and to start the `app service` run the following command from repo root location
+   - and to start the `app service` run the following command from repo root location.
 
    ```
    docker compose -p memcrypt-saas --profile app-services up -d
