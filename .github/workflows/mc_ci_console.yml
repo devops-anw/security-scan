@@ -101,7 +101,7 @@ jobs:
           CONSOLE_PUBLIC_KEYCLOAK_CLIENT_ID: test-frontend
           CONSOLE_DATABASE_URL: postgresql://postgres:password@localhost:5432/console_db
 
-      # - name: run code coverage
+      # - name:code coverage
       #   run: |
       #     poetry run pytest tests/ -v \
       #     --cov=app --cov-report=xml --cov-report=term-missing \
