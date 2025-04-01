@@ -9,7 +9,7 @@ inputs:
     required: true
   ignore-errors:
     description: "Continue Pipeline even when there are critical vulnerabilities"
-    default: "true"
+    default: "false"
 
 runs:
     using: "composite"
