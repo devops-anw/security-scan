@@ -68,7 +68,7 @@ To start the frontend application standalone for development, refer to the [Manu
 
 6. `Cleanup:`
 
-   To clean up Docker resources
+   To clean up Docker resources.
 
 - Run the cleanup script:
 
